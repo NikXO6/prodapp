@@ -1,0 +1,11 @@
+# Enable mod_rewrite
+RewriteEngine On
+# RewriteLog "C:/Users/nikunj/xampp/apache/logs/rewrite.log"
+# RewriteLogLevel 3
+# Rule to remove ".php" from URLs
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.*)$ $1.php [L]
+
+# Optional: Redirect "index" to root URL
+RewriteRule ^index$ / [L,R=301]
