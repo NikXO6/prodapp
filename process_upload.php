@@ -17,7 +17,7 @@ foreach ($non_duplicate_work_orders as $data) {
     $start_date = $data[3];
     $end_date = isset($data[4]) ? $data[4] : null;  // Optional end_date
     $required_qty = intval($data[5]);
-    $memo = isset($data[6]) ? $data[6] : '';  // Memo
+    $memo = isset($data[6]) ? $data[6] : null;  // Memo
     $line = isset($data[7]) ? $data[7] : null;  // Production line
     $priority = isset($data[8]) ? intval($data[8]) : null;  // Priority
 
@@ -50,7 +50,7 @@ if (!empty($duplicate_work_orders)) {
         $start_date = $data[3];
         $end_date = isset($data[4]) ? $data[4] : null;  // Optional end_date
         $required_qty = intval($data[5]);
-        $memo = isset($data[6]) ? $data[6] : '';
+        $memo = isset($data[6]) ? $data[6] : null;
         $line = isset($data[7]) ? $data[7] : null;  // Production line
         $priority = isset($data[8]) ? intval($data[8]) : null;  // Priority
 

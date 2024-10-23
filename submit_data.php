@@ -97,12 +97,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
             <div class="mb-3">
                 <label for="line" class="form-label">Line</label>
-                <select name="line" id="line" class="form-select" required>
-                    <option value="PAB Manual Line">PAB Manual Line</option>
-                    <option value="PAB AUTO Line">PAB AUTO Line</option>
-                    <option value="BUDDIES">BUDDIES </option>
-                </select>
+                <input type="text" name="line" id="line" class="form-control" readonly>
             </div>
+
             <div class="mb-3">
                 <label for="staff_count" class="form-label">Staff Count</label>
                 <input type="number" name="staff_count" id="staff_count" class="form-control" placeholder="Enter Staff Count" required>
@@ -129,11 +126,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             id: wo_id
                         },
                         success: function(response) {
-                            $('#wo_details').html(response);
+                            var wo = JSON.parse(response);
+
+                            if (wo.error) {
+                                $('#wo_details').html(wo.error);
+                                $('#line').val(''); // Clear line field if error
+                            } else {
+                                // Populate work order details
+                                $('#wo_details').html(
+                                    `<strong>Work Order Number:</strong> ${wo.work_order_number}<br>` +
+                                    `<strong>Item Code:</strong> ${wo.item_code}<br>` +
+                                    `<strong>Item Name:</strong> ${wo.item_name}<br>` +
+                                    `<strong>Required Quantity:</strong> ${wo.required_qty}<br>` +
+                                    `<strong>Start Date:</strong> ${wo.start_date}<br>` +
+                                    `<strong>Memo:</strong> ${wo.memo}`
+                                );
+
+                                // Automatically set the line field
+                                $('#line').val(wo.line);
+                            }
+                        },
+                        error: function() {
+                            $('#wo_details').html('Error fetching work order details. Please try again.');
+                            $('#line').val(''); // Clear line field if AJAX fails
                         }
                     });
                 } else {
                     $('#wo_details').html('Please select a work order to see the details...');
+                    $('#line').val(''); // Clear line field if no selection
                 }
             });
         });

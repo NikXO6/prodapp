@@ -4,8 +4,8 @@ include('db.php');
 if (isset($_GET['id'])) {
     $wo_id = intval($_GET['id']);
 
-    // Fetch the work order details from the database
-    $sql = "SELECT work_order_number, item_code, item_name, required_qty, start_date, status, memo FROM work_orders WHERE id = ?";
+    // Fetch the work order details from the database, including the line
+    $sql = "SELECT work_order_number, item_code, item_name, required_qty, start_date, status, memo, line FROM work_orders WHERE id = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param('i', $wo_id);
     $stmt->execute();
@@ -20,7 +20,8 @@ if (isset($_GET['id'])) {
         echo "<strong>Required Quantity:</strong> " . $row['required_qty'] . "<br>";
         echo "<strong>Start Date:</strong> " . $formatted_date . "<br>";
         echo "<strong>Memo:</strong> " . $row['memo'] . "<br>";
-        echo "<strong>Status:</strong> " . $row['status'];
+        echo "<strong>Status:</strong> " . $row['status'] . "<br>";
+        echo "<strong>Line:</strong> " . $row['line'];  // Include the line here
     } else {
         echo "No details found for this work order.";
     }
@@ -28,3 +29,4 @@ if (isset($_GET['id'])) {
     $stmt->close();
     $conn->close();
 }
+?>
