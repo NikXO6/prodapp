@@ -54,7 +54,7 @@ if ($production_id > 0) {
         }
 
         // Redirect to the dashboard with a success message
-        header('Location: dashboard.php?msg=deleted');
+        header('Location: index.php?msg=deleted');
         exit;
 
     } else {
@@ -62,7 +62,7 @@ if ($production_id > 0) {
     }
 } else {
     // If no valid production ID is provided, redirect back
-    header('Location: dashboard.php');
+    header('Location: index.php');
     exit;
 }
 ?>

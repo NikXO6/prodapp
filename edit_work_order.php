@@ -6,6 +6,7 @@ if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit;
 }
+
 // Check if an ID is provided in the URL
 if (isset($_GET['id'])) {
     $work_order_id = intval($_GET['id']);
@@ -36,11 +37,12 @@ if (isset($_POST['update_work_order'])) {
     $end_date = $_POST['end_date'];
     $priority = intval($_POST['priority']);
     $line = $_POST['line'];
+    $parent_wo_id = isset($_POST['parent_wo_id']) ? intval($_POST['parent_wo_id']) : null;
     $memo = $_POST['memo'];
 
     // Update the work order in the database
-    $stmt = $conn->prepare("UPDATE work_orders SET work_order_number = ?, item_code = ?, item_name = ?, required_qty = ?, start_date = ?, end_date = ?, priority = ?, line = ?, memo = ? WHERE id = ?");
-    $stmt->bind_param("sssississi", $work_order_number, $item_code, $item_name, $required_qty, $start_date, $end_date, $priority, $line, $memo, $work_order_id);
+    $stmt = $conn->prepare("UPDATE work_orders SET work_order_number = ?, item_code = ?, item_name = ?, required_qty = ?, start_date = ?, end_date = ?, priority = ?, line = ?, parent_wo_id = ?, memo = ? WHERE id = ?");
+    $stmt->bind_param("sssississi", $work_order_number, $item_code, $item_name, $required_qty, $start_date, $end_date, $priority, $line, $parent_wo_id, $memo, $work_order_id);
 
     if ($stmt->execute()) {
         // Check the total produced quantity for this work order
@@ -64,8 +66,47 @@ if (isset($_POST['update_work_order'])) {
         $stmt->bind_param("si", $new_status, $work_order_id);
         $stmt->execute();
 
+        // Check if the work order is a sub-assembly and update the parent if necessary
+        if ($parent_wo_id) {
+            // Update the parent work order status if sub-assembly is completed
+            $stmt = $conn->prepare("SELECT IFNULL(SUM(quantity), 0) AS parent_produced FROM daily_production WHERE work_order_id = ?");
+            $stmt->bind_param("i", $parent_wo_id);
+            $stmt->execute();
+            $parent_production_data = $stmt->get_result()->fetch_assoc();
+            $parent_total_produced = $parent_production_data['parent_produced'];
+
+            $parent_required_qty = intval($conn->query("SELECT required_qty FROM work_orders WHERE id = $parent_wo_id")->fetch_assoc()['required_qty']);
+            
+            if ($parent_total_produced >= $parent_required_qty) {
+                $parent_status = 'Completed';
+            } elseif ($parent_total_produced == 0) {
+                $parent_status = 'Released';
+            } else {
+                $parent_status = 'In Process';
+            }
+
+            // Update the parent work order status
+            $stmt = $conn->prepare("UPDATE work_orders SET status = ? WHERE id = ?");
+            $stmt->bind_param("si", $parent_status, $parent_wo_id);
+            $stmt->execute();
+        }
+
         // Redirect to the dashboard after the update
         header("Location: dashboard.php");
+        exit;
+    } else {
+        echo "<p style='color: red;'>Error: " . $stmt->error . "</p>";
+    }
+}
+
+// Handle form submission for deleting the work order
+if (isset($_POST['delete_work_order'])) {
+    // Delete the work order from the database
+    $stmt = $conn->prepare("DELETE FROM work_orders WHERE id = ?");
+    $stmt->bind_param("i", $work_order_id);
+
+    if ($stmt->execute()) {
+        header("Location: dashboard.php?msg=Work Order Deleted");
         exit;
     } else {
         echo "<p style='color: red;'>Error: " . $stmt->error . "</p>";
@@ -82,6 +123,8 @@ if (isset($_POST['update_work_order'])) {
     <title>Edit Work Order</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Select2 CSS for searchable dropdowns -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 </head>
 
 <body>
@@ -130,7 +173,8 @@ if (isset($_POST['update_work_order'])) {
                     // Fetch all available work orders to select as parent
                     $result = $conn->query("SELECT id, work_order_number FROM work_orders WHERE parent_wo_id IS NULL");
                     while ($row = $result->fetch_assoc()) {
-                        echo "<option value='{$row['id']}'>{$row['work_order_number']}</option>";
+                        $selected = ($work_order['parent_wo_id'] == $row['id']) ? 'selected' : '';
+                        echo "<option value='{$row['id']}' {$selected}>{$row['work_order_number']}</option>";
                     }
                     ?>
                 </select>
@@ -140,13 +184,25 @@ if (isset($_POST['update_work_order'])) {
                 <textarea name="memo" id="memo" class="form-control" rows="3"><?= $work_order['memo'] ?></textarea>
             </div>
 
-
             <button type="submit" name="update_work_order" class="btn btn-primary">Update Work Order</button>
+            <button type="submit" name="delete_work_order" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this work order?');">Delete Work Order</button>
         </form>
     </div>
 
+    <!-- Select2 JS for searchable dropdowns -->
+    <script>
+        $(document).ready(function() {
+            $('#parent_wo_id').select2({
+                placeholder: "Select Parent Work Order",
+                allowClear: true
+            });
+        });
+    </script>
+
     <!-- Bootstrap JS and dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 </body>
 
 </html>
