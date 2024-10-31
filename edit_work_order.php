@@ -1,6 +1,7 @@
 <?php
 include('db.php');
 session_start();
+
 // Ensure the user is logged in
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
@@ -38,59 +39,14 @@ if (isset($_POST['update_work_order'])) {
     $priority = intval($_POST['priority']);
     $line = $_POST['line'];
     $parent_wo_id = isset($_POST['parent_wo_id']) ? intval($_POST['parent_wo_id']) : null;
+    $sales_order_number = $_POST['sales_order_number'];
     $memo = $_POST['memo'];
 
     // Update the work order in the database
-    $stmt = $conn->prepare("UPDATE work_orders SET work_order_number = ?, item_code = ?, item_name = ?, required_qty = ?, start_date = ?, end_date = ?, priority = ?, line = ?, parent_wo_id = ?, memo = ? WHERE id = ?");
-    $stmt->bind_param("sssississi", $work_order_number, $item_code, $item_name, $required_qty, $start_date, $end_date, $priority, $line, $parent_wo_id, $memo, $work_order_id);
+    $stmt = $conn->prepare("UPDATE work_orders SET work_order_number = ?, item_code = ?, item_name = ?, required_qty = ?, start_date = ?, end_date = ?, priority = ?, line = ?, parent_wo_id = ?, sales_order_number = ?, memo = ? WHERE id = ?");
+    $stmt->bind_param("sssississisi", $work_order_number, $item_code, $item_name, $required_qty, $start_date, $end_date, $priority, $line, $parent_wo_id, $sales_order_number, $memo, $work_order_id);
 
     if ($stmt->execute()) {
-        // Check the total produced quantity for this work order
-        $stmt = $conn->prepare("SELECT IFNULL(SUM(quantity), 0) AS total_produced FROM daily_production WHERE work_order_id = ?");
-        $stmt->bind_param("i", $work_order_id);
-        $stmt->execute();
-        $production_data = $stmt->get_result()->fetch_assoc();
-        $total_produced = $production_data['total_produced'];
-
-        // Update the status based on total produced vs required quantity
-        if ($total_produced >= $required_qty) {
-            $new_status = 'Completed';
-        } elseif ($total_produced == 0) {
-            $new_status = 'Released';
-        } else {
-            $new_status = 'In Process';
-        }
-
-        // Update the work order status in the database
-        $stmt = $conn->prepare("UPDATE work_orders SET status = ? WHERE id = ?");
-        $stmt->bind_param("si", $new_status, $work_order_id);
-        $stmt->execute();
-
-        // Check if the work order is a sub-assembly and update the parent if necessary
-        if ($parent_wo_id) {
-            // Update the parent work order status if sub-assembly is completed
-            $stmt = $conn->prepare("SELECT IFNULL(SUM(quantity), 0) AS parent_produced FROM daily_production WHERE work_order_id = ?");
-            $stmt->bind_param("i", $parent_wo_id);
-            $stmt->execute();
-            $parent_production_data = $stmt->get_result()->fetch_assoc();
-            $parent_total_produced = $parent_production_data['parent_produced'];
-
-            $parent_required_qty = intval($conn->query("SELECT required_qty FROM work_orders WHERE id = $parent_wo_id")->fetch_assoc()['required_qty']);
-            
-            if ($parent_total_produced >= $parent_required_qty) {
-                $parent_status = 'Completed';
-            } elseif ($parent_total_produced == 0) {
-                $parent_status = 'Released';
-            } else {
-                $parent_status = 'In Process';
-            }
-
-            // Update the parent work order status
-            $stmt = $conn->prepare("UPDATE work_orders SET status = ? WHERE id = ?");
-            $stmt->bind_param("si", $parent_status, $parent_wo_id);
-            $stmt->execute();
-        }
-
         // Redirect to the dashboard after the update
         header("Location: dashboard.php");
         exit;
@@ -167,6 +123,10 @@ if (isset($_POST['delete_work_order'])) {
             <div class="mb-3">
                 <label for="line" class="form-label">Line</label>
                 <input type="text" name="line" id="line" class="form-control" value="<?= $work_order['line'] ?>" required>
+            </div>
+            <div class="mb-3">
+                <label for="sales_order_number" class="form-label">Sales Order Number</label>
+                <input type="text" name="sales_order_number" id="sales_order_number" class="form-control" value="<?= $work_order['sales_order_number'] ?>">
             </div>
             <div class="mb-3">
                 <label for="parent_wo_id" class="form-label">Parent Work Order (if sub-assembly)</label>

@@ -57,7 +57,7 @@ function schedule_work_orders_per_line($work_orders_by_line, $daily_capacities_b
                     'id' => $order['id'],
                     'title' => $order['work_order_number'] . ' - ' . $order['item_code'] . ' (' . $order['status'] . ')',
                     'start' => $line_current_day[$line]->format('Y-m-d'),
-                    'end' => $line_current_day[$line]->format('Y-m-d'),
+                    'end' => $order['end_date'],  // Use the end date for multi-day events
                     'backgroundColor' => $background_color,  // Background based on status
                     'borderColor' => $border_color,          // Border based on line
                     'extendedProps' => [
@@ -79,7 +79,7 @@ function schedule_work_orders_per_line($work_orders_by_line, $daily_capacities_b
 }
 
 // Fetch all work orders, grouped by line, and sorted by priority within each line
-$sql = "SELECT id, work_order_number, item_code, required_qty, line, priority, start_date, status
+$sql = "SELECT id, work_order_number, item_code, required_qty, line, priority, start_date, end_date, status
         FROM work_orders
         WHERE status IN ('In Process', 'Released', 'Completed') 
         ORDER BY line, priority ASC";
@@ -92,11 +92,11 @@ while ($row = $result->fetch_assoc()) {
     $work_orders_by_line[$row['line']][] = $row;
 }
 
-// Define the daily capacity for each line (example data)
+// Define the daily capacity for each line
 $daily_capacities_by_line = [
     'PAB AUTO' => 1200,  // Line AUTO capacity
     'PAB MANUAL' => 600,  // Line MANUAL capacity
-    'BUDDIES' => 300,  // Line MANUAL capacity
+    'BUDDIES' => 300,  // Line BUDDIES capacity
 ];
 
 // Schedule work orders using the waterfall approach per line

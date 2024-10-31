@@ -9,31 +9,56 @@ $duplicate_action = $_POST['duplicate_action'] ?? 'skip';
 $duplicate_work_orders = $_SESSION['duplicate_work_orders'] ?? [];
 $non_duplicate_work_orders = $_SESSION['non_duplicate_work_orders'] ?? [];
 
-// Insert work orders first (ignore parent references initially)
+// Function to extract Work Order or Sales Order number
+function extract_order_number($input)
+{
+    $input = trim($input);
+    if (strpos($input, 'Sales Order') !== false) {
+        return trim(explode('Sales Order #', $input)[1]);
+    } elseif (strpos($input, 'Work Order') !== false) {
+        return trim(explode('Work Order #', $input)[1]);
+    }
+    return null;
+}
+
+function parse_date($date_str)
+{
+    $date_obj = DateTime::createFromFormat('d/m/Y', $date_str);
+    if ($date_obj !== false) {
+        return $date_obj->format('Y-m-d');
+    }
+    return null; // Return NULL if parsing fails
+}
+
+// Step 1: Insert all non-duplicate work orders first
 foreach ($non_duplicate_work_orders as $data) {
     $work_order_number = $data[0];
-    $item_code = $data[1];
-    $item_name = $data[2];
-    $start_date = $data[3];
-    $end_date = isset($data[4]) ? $data[4] : null;  // Optional end_date
+    $item_code = !empty($data[1]) ? $data[1] : null;
+    $item_name = !empty($data[2]) ? $data[2] : null;
+    $start_date = parse_date($data[3]);  // Parse the date to YYYY-MM-DD
+    $end_date = isset($data[4]) ? parse_date($data[4]) : null;  // Optional end_date with parsing
     $required_qty = intval($data[5]);
-    $memo = isset($data[6]) ? $data[6] : null;  // Memo
-    $line = isset($data[7]) ? $data[7] : null;  // Production line
-    $priority = isset($data[8]) ? intval($data[8]) : null;  // Priority
-    $parent_so_or_wo = $data[9];  // Parent Work Order/Sales Order number column
-    $sales_order_number = isset($data[10]) ? $data[10] : null;  // Sales Order Number
+    $memo = isset($data[6]) && !empty($data[6]) ? $data[6] : null;
+    $line = !empty($data[7]) ? $data[7] : null;
+    $priority = isset($data[8]) && !empty($data[8]) ? $data[8] : null;
+    $sales_order_number = null;
+    $parent_wo_number = null;
 
-    // If total_produced is 0, set status to 'Released'
-    $total_produced = 0;  // New work orders will have 0 produced initially
+    if (strpos($data[9], 'Sales Order') !== false) {
+        $sales_order_number = extract_order_number($data[9]);
+    } elseif (strpos($data[9], 'Work Order') !== false) {
+        $parent_wo_number = extract_order_number($data[9]);
+    }
+
+    $total_produced = 0;
     $status = ($total_produced == 0) ? 'Released' : 'In Process';
 
-    // Insert the work order without parent info
-    $sql = "INSERT INTO work_orders (work_order_number, item_code, item_name, start_date, end_date, required_qty, memo, status, line, priority, sales_order_number)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO work_orders (work_order_number, item_code, item_name, start_date, end_date, required_qty, memo, status, line, priority, sales_order_number, parent_wo_number)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     if ($stmt = $conn->prepare($sql)) {
-        $stmt->bind_param('ssssssissis', $work_order_number, $item_code, $item_name, $start_date, $end_date, $required_qty, $memo, $status, $line, $priority, $sales_order_number);
+        $stmt->bind_param('sssssissssss', $work_order_number, $item_code, $item_name, $start_date, $end_date, $required_qty, $memo, $status, $line, $priority, $sales_order_number, $parent_wo_number);
         if (!$stmt->execute()) {
-            echo "Error inserting work order: " . $stmt->error;
+            echo "Error inserting record: " . $stmt->error;
         }
         $stmt->close();
     } else {
@@ -41,54 +66,55 @@ foreach ($non_duplicate_work_orders as $data) {
     }
 }
 
-// Step 2: After inserting all work orders, now handle the parent work order assignments
-foreach (array_merge($non_duplicate_work_orders, $duplicate_work_orders) as $data) {
-    $work_order_number = $data[0];
-    $parent_so_or_wo = $data[9];  // This is the column that may contain Parent Work Order or Sales Order
+// Step 2: Handle duplicate work orders based on the selected action
+if (!empty($duplicate_work_orders)) {
+    foreach ($duplicate_work_orders as $data) {
+        $work_order_number = $data[0];
+        $item_code = !empty($data[1]) ? $data[1] : null;
+        $item_name = !empty($data[2]) ? $data[2] : null;
+        $start_date = parse_date($data[3]);  // Parse the date to YYYY-MM-DD
+        $end_date = isset($data[4]) ? parse_date($data[4]) : null;  // Optional end_date with parsing
+        $required_qty = intval($data[5]);
+        $memo = isset($data[6]) && !empty($data[6]) ? $data[6] : null;
+        $line = !empty($data[7]) ? $data[7] : null;
+        $priority = isset($data[8]) && !empty($data[8]) ? $data[8] : null;
+        $sales_order_number = null;
+        $parent_wo_number = null;
 
-    // Initialize variables for parent work order ID
-    $parent_work_order_id = null;
+        if (strpos($data[9], 'Sales Order') !== false) {
+            $sales_order_number = extract_order_number($data[9]);
+        } elseif (strpos($data[9], 'Work Order') !== false) {
+            $parent_wo_number = extract_order_number($data[9]);
+        }
 
-    // Determine whether the value is a parent work order or a sales order
-    if (strpos($parent_so_or_wo, 'Work Order #') === 0) {
-        // It's a Parent Work Order, we fetch the ID from the number
-        $parent_work_order_number = str_replace('Work Order #', '', $parent_so_or_wo);
+        $total_produced = 0;
+        $status = ($total_produced == 0) ? 'Released' : 'In Process';
 
-        // Check if the Parent Work Order exists
-        $sql = "SELECT id FROM work_orders WHERE work_order_number = ?";
-        if ($stmt = $conn->prepare($sql)) {
-            $stmt->bind_param('s', $parent_work_order_number);
-            $stmt->execute();
-            $result = $stmt->get_result();
-            if ($row = $result->fetch_assoc()) {
-                $parent_work_order_id = $row['id']; // Parent Work Order exists
+        if ($duplicate_action == 'skip') {
+            continue;
+        } elseif ($duplicate_action == 'update') {
+            $sql = "UPDATE work_orders SET item_code = ?, item_name = ?, start_date = ?, end_date = ?, required_qty = ?, memo = ?, status = ?, line = ?, priority = ?, sales_order_number = ?, parent_wo_number = ?
+                    WHERE work_order_number = ?";
+            if ($stmt = $conn->prepare($sql)) {
+                $stmt->bind_param('sssssissssss', $work_order_number, $item_code, $item_name, $start_date, $end_date, $required_qty, $memo, $status, $line, $priority, $sales_order_number, $parent_wo_number);
+                if (!$stmt->execute()) {
+                    echo "Error inserting record: " . $stmt->error;
+                }
+                $stmt->close();
             } else {
-                // Parent Work Order doesn't exist, confirm with the user
-                echo "<script>
-                    if (confirm('Parent Work Order #{$parent_work_order_number} does not exist. Do you want to create it?')) {
-                        window.location.href = 'create_parent_wo.php?parent_wo_number={$parent_work_order_number}&child_wo={$work_order_number}';
-                    } else {
-                        // Skip creating the parent
-                        window.location.href = 'upload_wo.php?msg=skipped';
-                    }
-                </script>";
-                exit;
+                echo "Error preparing query: " . $conn->error;
             }
-            $stmt->close();
         }
-    }
-
-    // Update the child work orders with the parent_work_order_id
-    $sql_update = "UPDATE work_orders SET parent_wo_id = ? WHERE work_order_number = ?";
-    if ($stmt_update = $conn->prepare($sql_update)) {
-        $stmt_update->bind_param('is', $parent_work_order_id, $work_order_number);
-        if (!$stmt_update->execute()) {
-            echo "Error updating parent references: " . $stmt_update->error;
-        }
-        $stmt_update->close();
     }
 }
 
+// Step 3: Update Parent Work Orders (if they exist in the same upload)
+$sql_update_parent_wo = "UPDATE work_orders wo
+                         JOIN work_orders parent_wo ON wo.parent_wo_number = parent_wo.work_order_number
+                         SET wo.parent_wo_id = parent_wo.id
+                         WHERE wo.parent_wo_id IS NULL";
+$conn->query($sql_update_parent_wo);
+
+// Redirect back to the upload page with a success message
 header('Location: upload_wo.php?msg=success');
 exit;
-?>
