@@ -10,15 +10,13 @@ $duplicate_work_orders = $_SESSION['duplicate_work_orders'] ?? [];
 $non_duplicate_work_orders = $_SESSION['non_duplicate_work_orders'] ?? [];
 
 // Function to extract Work Order or Sales Order number
-function extract_order_number($input)
-{
-    $input = trim($input);
-    if (strpos($input, 'Sales Order') !== false) {
-        return trim(explode('Sales Order #', $input)[1]);
-    } elseif (strpos($input, 'Work Order') !== false) {
-        return trim(explode('Work Order #', $input)[1]);
-    }
-    return null;
+$sales_order_number = null;
+$parent_wo_number = null;
+
+if (strpos($data[9], 'SO') === 0) {
+    $sales_order_number = trim($data[9]);
+} elseif (strpos($data[9], 'WO') === 0) {
+    $parent_wo_number = trim($data[9]);
 }
 
 function parse_date($date_str)
@@ -35,6 +33,7 @@ foreach ($non_duplicate_work_orders as $data) {
     $work_order_number = $data[0];
     $item_code = !empty($data[1]) ? $data[1] : null;
     $item_name = !empty($data[2]) ? $data[2] : null;
+    $internal_id = !empty($data[10]) ? $data[10] : null;
     $start_date = parse_date($data[3]);  // Parse the date to YYYY-MM-DD
     $end_date = isset($data[4]) ? parse_date($data[4]) : null;  // Optional end_date with parsing
     $required_qty = intval($data[5]);
@@ -44,19 +43,20 @@ foreach ($non_duplicate_work_orders as $data) {
     $sales_order_number = null;
     $parent_wo_number = null;
 
-    if (strpos($data[9], 'Sales Order') !== false) {
-        $sales_order_number = extract_order_number($data[9]);
-    } elseif (strpos($data[9], 'Work Order') !== false) {
-        $parent_wo_number = extract_order_number($data[9]);
+    if (strpos($data[9], 'SO') === 0) {
+        $sales_order_number = trim($data[9]);
+    } elseif (strpos($data[9], 'WO') === 0) {
+        $parent_wo_number = trim($data[9]);
     }
+
 
     $total_produced = 0;
     $status = ($total_produced == 0) ? 'Released' : 'In Process';
 
-    $sql = "INSERT INTO work_orders (work_order_number, item_code, item_name, start_date, end_date, required_qty, memo, status, line, priority, sales_order_number, parent_wo_number)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    $sql = "INSERT INTO work_orders (work_order_number, item_code, item_name, start_date, end_date, required_qty, memo, status, line, priority, sales_order_number, parent_wo_number, internal_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     if ($stmt = $conn->prepare($sql)) {
-        $stmt->bind_param('sssssissssss', $work_order_number, $item_code, $item_name, $start_date, $end_date, $required_qty, $memo, $status, $line, $priority, $sales_order_number, $parent_wo_number);
+        $stmt->bind_param('sssssissssssi', $work_order_number, $item_code, $item_name, $start_date, $end_date, $required_qty, $memo, $status, $line, $priority, $sales_order_number, $parent_wo_number, $internal_id);
         if (!$stmt->execute()) {
             echo "Error inserting record: " . $stmt->error;
         }
@@ -72,6 +72,7 @@ if (!empty($duplicate_work_orders)) {
         $work_order_number = $data[0];
         $item_code = !empty($data[1]) ? $data[1] : null;
         $item_name = !empty($data[2]) ? $data[2] : null;
+        $internal_id = !empty($data[10]) ? $data[10] : null;
         $start_date = parse_date($data[3]);  // Parse the date to YYYY-MM-DD
         $end_date = isset($data[4]) ? parse_date($data[4]) : null;  // Optional end_date with parsing
         $required_qty = intval($data[5]);
@@ -81,11 +82,12 @@ if (!empty($duplicate_work_orders)) {
         $sales_order_number = null;
         $parent_wo_number = null;
 
-        if (strpos($data[9], 'Sales Order') !== false) {
-            $sales_order_number = extract_order_number($data[9]);
-        } elseif (strpos($data[9], 'Work Order') !== false) {
-            $parent_wo_number = extract_order_number($data[9]);
+        if (strpos($data[9], 'SO') === 0) {
+            $sales_order_number = trim($data[9]);
+        } elseif (strpos($data[9], 'WO') === 0) {
+            $parent_wo_number = trim($data[9]);
         }
+
 
         $total_produced = 0;
         $status = ($total_produced == 0) ? 'Released' : 'In Process';
@@ -93,10 +95,10 @@ if (!empty($duplicate_work_orders)) {
         if ($duplicate_action == 'skip') {
             continue;
         } elseif ($duplicate_action == 'update') {
-            $sql = "UPDATE work_orders SET item_code = ?, item_name = ?, start_date = ?, end_date = ?, required_qty = ?, memo = ?, status = ?, line = ?, priority = ?, sales_order_number = ?, parent_wo_number = ?
+            $sql = "UPDATE work_orders SET item_code = ?, item_name = ?, start_date = ?, end_date = ?, required_qty = ?, memo = ?, status = ?, line = ?, priority = ?, sales_order_number = ?, parent_wo_number = ?, internal_id = ?
                     WHERE work_order_number = ?";
             if ($stmt = $conn->prepare($sql)) {
-                $stmt->bind_param('sssssissssss', $work_order_number, $item_code, $item_name, $start_date, $end_date, $required_qty, $memo, $status, $line, $priority, $sales_order_number, $parent_wo_number);
+                $stmt->bind_param('sssssissssssi', $work_order_number, $item_code, $item_name, $start_date, $end_date, $required_qty, $memo, $status, $line, $priority, $sales_order_number, $parent_wo_number, $internal_id);
                 if (!$stmt->execute()) {
                     echo "Error inserting record: " . $stmt->error;
                 }

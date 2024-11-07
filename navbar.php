@@ -18,15 +18,19 @@
         <li class="nav-item">
           <a class="nav-link" href="calendar.php">Calendar</a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link" href="material_usage.php">Material Usage Entry</a>
+        </li>
+
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             Work Orders
           </a>
           <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-          <li>
+            <li>
               <a class="dropdown-item" href="upload_wo.php">Upload Work Order</a>
-            </li>  
-          <li>
+            </li>
+            <li>
               <a class="dropdown-item" href="add_work_order.php">Add Work Order</a>
             </li>
             <li>
