@@ -13,7 +13,7 @@ $status_filter = isset($_GET['status']) ? $_GET['status'] : '';
 $start_date_filter = isset($_GET['start_date']) ? $_GET['start_date'] : '';
 $end_date_filter = isset($_GET['end_date']) ? $_GET['end_date'] : '';
 
-// Build the query dynamically based on the filters applied
+// Build the query to fetch work orders with daily production data
 $query = "
     SELECT 
         wo.id,
@@ -29,7 +29,7 @@ $query = "
         wo.priority,
         IFNULL(SUM(dp.quantity), 0) AS total_produced
     FROM work_orders wo
-    LEFT JOIN daily_production dp ON wo.id = dp.work_order_id
+    INNER JOIN daily_production dp ON wo.id = dp.work_order_id
     WHERE 1 = 1
 ";
 
@@ -68,7 +68,7 @@ $result = $stmt->get_result();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Work Order Tracking Dashboard</title>
+    <title>Filtered Work Order Dashboard</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Table CSS -->
@@ -80,10 +80,10 @@ $result = $stmt->get_result();
 <?php include('navbar.php'); ?>
 
 <div class="container-fluid mt-6">
-    <h1 class="h3 mb-4">Work Order Tracking Dashboard</h1>
+    <h1 class="h3 mb-4">Filtered Work Order Dashboard</h1>
 
     <!-- Filter Form -->
-    <form method="GET" action="dashboard.php" class="mb-4">
+    <form method="GET" action="filtered_dashboard.php" class="mb-4">
         <div class="row g-3">
             <div class="col-md-3">
                 <label for="status" class="form-label">Status</label>
@@ -107,7 +107,7 @@ $result = $stmt->get_result();
 
         <div class="mt-3">
             <button type="submit" class="btn btn-primary">Filter</button>
-            <a href="dashboard.php" class="btn btn-secondary">Reset</a>
+            <a href="filtered_dashboard.php" class="btn btn-secondary">Reset</a>
         </div>
     </form>
 
@@ -146,13 +146,13 @@ $result = $stmt->get_result();
                     $progress = ($progress > 100) ? 100 : $progress; // Prevent over 100%
                     ?>
                     <tr>
-                        <td><?= htmlspecialchars($row['work_order_number']??'') ?></td>
-                        <td><?= htmlspecialchars($row['start_date']??'') ?></td>
-                        <td><?= htmlspecialchars($row['end_date']??'') ?></td>
-                        <td><?= htmlspecialchars($row['item_code']??'') ?></td>
-                        <td><?= htmlspecialchars($row['item_name']??'') ?></td>
-                        <td><?= htmlspecialchars($row['required_qty']??'') ?></td>
-                        <td><?= htmlspecialchars($row['total_produced']??'') ?></td>
+                        <td><?= htmlspecialchars($row['work_order_number'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($row['start_date'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($row['end_date'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($row['item_code'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($row['item_name'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($row['required_qty'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($row['total_produced'] ?? '') ?></td>
                         <td>
                             <div class="progress">
                                 <div class="progress-bar" role="progressbar" style="width: <?= $progress ?>%;" aria-valuenow="<?= $progress ?>" aria-valuemin="0" aria-valuemax="100">
@@ -160,10 +160,10 @@ $result = $stmt->get_result();
                                 </div>
                             </div>
                         </td>
-                        <td><?= htmlspecialchars($row['status']??'') ?></td>
-                        <td><?= htmlspecialchars($row['memo'] ??'') ?></td>
-                        <td><?= htmlspecialchars($row['line']??'') ?></td>
-                        <td><?= htmlspecialchars($row['priority']??'') ?></td>
+                        <td><?= htmlspecialchars($row['status'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($row['memo'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($row['line'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($row['priority'] ?? '') ?></td>
                         <td>
                             <a href="view_work_order.php?id=<?= $row['id'] ?>" class="btn btn-info btn-sm">View</a>
                             <a href="edit_work_order.php?id=<?= $row['id'] ?>" class="btn btn-warning btn-sm">Edit</a>

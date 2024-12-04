@@ -21,6 +21,7 @@ if (isset($_POST['login'])) {
     if ($user && password_verify($password, $user['password'])) {
         // Login success
         $_SESSION['username'] = $user['username'];
+        $_SESSION['user_role'] = $user['role'];
         header("Location: index.php"); // Redirect to the dashboard after successful login
         exit;
     } else {

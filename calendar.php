@@ -11,6 +11,10 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Table CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-table@1.21.2/dist/bootstrap-table.min.css" rel="stylesheet">
+    <!-- FullCalendar JS -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js"></script>
+    <!-- jQuery (for AJAX) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 
 <body>
@@ -21,17 +25,17 @@
         <div id="calendar"></div>
     </div>
 
-    <!-- FullCalendar JS -->
-    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js"></script>
-    <!-- jQuery (for AJAX) -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             var calendarEl = document.getElementById('calendar');
 
             var calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
                 events: function(fetchInfo, successCallback, failureCallback) {
                     $.ajax({
                         url: 'get_wo_for_calendar.php', // PHP that returns events
@@ -49,15 +53,19 @@
                     // Open modal on event click and populate the form fields
                     $('#editModal').modal('show');
                     $('#work_order_id').val(info.event.id); // Set work order ID
-                    $('#start_date').val(info.event.startStr); // Set start date
-                    $('#end_date').val(info.event.endStr ? info.event.endStr : info.event.startStr); // Set end date, or default to start date
+                    $('#start_date').val(info.event.startStr.split('T')[0]); // Set start date, removing time portion if present
+                    $('#end_date').val(info.event.endStr ? info.event.endStr.split('T')[0] : info.event.startStr.split('T')[0]); // Set end date, or default to start date
                 },
                 eventDidMount: function(info) {
+                    // Apply a thicker border for each event
+                    info.el.style.borderWidth = '3px'; // Set border width to 3px
+                    info.el.style.padding = '2px'; // Add padding to the event
                     // Tooltip logic
                     var tooltipContent = `
                 <strong>WO Number:</strong> ${info.event.title}<br>
                 <strong>Item Code:</strong> ${info.event.extendedProps.item_code}<br>
-                <strong>Required Quantity:</strong> ${info.event.extendedProps.required_qty}<br>
+                <strong>To Produce:</strong> ${info.event.extendedProps.required_qty}<br>
+                <strong>Actual Quantity Required:</strong> ${info.event.extendedProps.actual_qty}<br>
                 <strong>Line:</strong> ${info.event.extendedProps.line}<br>
                 <strong>Status:</strong> ${info.event.extendedProps.status}
             `;
@@ -73,6 +81,7 @@
             calendar.render();
         });
     </script>
+
     <!-- Modal for editing work order dates -->
     <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
         <div class="modal-dialog">
@@ -83,7 +92,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <input type="hidden" name="work_order_id" id="work_order_id">
+                        <input type="text" name="work_order_id" id="work_order_id">
                         <div class="mb-3">
                             <label for="start_date" class="form-label">Start Date</label>
                             <input type="date" class="form-control" name="start_date" id="start_date" required>
@@ -102,12 +111,8 @@
         </div>
     </div>
 
+    <!-- Bootstrap JS (necessary for modal and tooltips) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-<!-- Bootstrap JS (necessary for modal and tooltips) -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-<!-- FullCalendar JS -->
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js"></script>
-<!-- jQuery (for AJAX) -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 </html>

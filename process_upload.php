@@ -13,10 +13,20 @@ $non_duplicate_work_orders = $_SESSION['non_duplicate_work_orders'] ?? [];
 $sales_order_number = null;
 $parent_wo_number = null;
 
-if (strpos($data[9], 'SO') === 0) {
-    $sales_order_number = trim($data[9]);
-} elseif (strpos($data[9], 'WO') === 0) {
-    $parent_wo_number = trim($data[9]);
+if (is_array($data)) {
+    $sales_order_number = null;
+    $parent_wo_number = null;
+
+    // Use a default empty string if the data field is null
+    $field_9 = !empty($data[9]) ? trim($data[9]) : '';
+
+    if (strpos($field_9, 'SO') === 0) {
+        $sales_order_number = $field_9;
+    } elseif (strpos($field_9, 'WO') === 0) {
+        $parent_wo_number = $field_9;
+    }
+
+    // Further processing...
 }
 
 function parse_date($date_str)
@@ -43,10 +53,20 @@ foreach ($non_duplicate_work_orders as $data) {
     $sales_order_number = null;
     $parent_wo_number = null;
 
-    if (strpos($data[9], 'SO') === 0) {
-        $sales_order_number = trim($data[9]);
-    } elseif (strpos($data[9], 'WO') === 0) {
-        $parent_wo_number = trim($data[9]);
+    if (is_array($data)) {
+        $sales_order_number = null;
+        $parent_wo_number = null;
+    
+        // Use a default empty string if the data field is null
+        $field_9 = !empty($data[9]) ? trim($data[9]) : '';
+    
+        if (strpos($field_9, 'SO') === 0) {
+            $sales_order_number = $field_9;
+        } elseif (strpos($field_9, 'WO') === 0) {
+            $parent_wo_number = $field_9;
+        }
+    
+        // Further processing...
     }
 
 
@@ -82,10 +102,20 @@ if (!empty($duplicate_work_orders)) {
         $sales_order_number = null;
         $parent_wo_number = null;
 
-        if (strpos($data[9], 'SO') === 0) {
-            $sales_order_number = trim($data[9]);
-        } elseif (strpos($data[9], 'WO') === 0) {
-            $parent_wo_number = trim($data[9]);
+        if (is_array($data)) {
+            $sales_order_number = null;
+            $parent_wo_number = null;
+        
+            // Use a default empty string if the data field is null
+            $field_9 = !empty($data[9]) ? trim($data[9]) : '';
+        
+            if (strpos($field_9, 'SO') === 0) {
+                $sales_order_number = $field_9;
+            } elseif (strpos($field_9, 'WO') === 0) {
+                $parent_wo_number = $field_9;
+            }
+        
+            // Further processing...
         }
 
 

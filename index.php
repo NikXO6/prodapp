@@ -34,8 +34,9 @@ $result = mysqli_query($conn, $sql);
 </head>
 <body>
 <?php include('navbar.php'); ?>
-    <div class="container mt-4">
+    <div class="container-fluid mt-4">
         <h2 class="h4">Daily Production Overview</h2>
+        <div class="table-responsive">
 
         <table class="table table-striped table-bordered">
             <thead>
@@ -80,6 +81,7 @@ $result = mysqli_query($conn, $sql);
                 ?>
             </tbody>
         </table>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>

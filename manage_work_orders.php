@@ -21,9 +21,10 @@ if (!isset($_SESSION['username'])) {
 <body>
 <?php include('navbar.php'); ?>
 
-    <div class="container mt-4">
+    <div class="container-fluid mt-4">
         <h1 class="h3 mb-3">Manage Work Orders</h1>
         <a href="add_work_order.php" class="btn btn-primary mb-3">Add New Work Order</a>
+        <div class="table-responsive">
 
         <!-- Table to display all Work Orders -->
         <table class="table table-striped table-bordered">
@@ -72,6 +73,7 @@ if (!isset($_SESSION['username'])) {
                 ?>
             </tbody>
         </table>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
